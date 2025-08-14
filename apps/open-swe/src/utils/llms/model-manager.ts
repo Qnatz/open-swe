@@ -228,9 +228,14 @@ export class ModelManager {
     task: LLMTask,
     selectedModel: ConfigurableModel,
   ) {
-    const configs: ModelLoadConfig[] = [];
     const baseConfig = this.getBaseConfigForTask(config, task);
 
+    // If a model was explicitly selected via the CLI, only use that model and disable fallbacks.
+    if (config.configurable?.model) {
+      return [baseConfig];
+    }
+
+    const configs: ModelLoadConfig[] = [];
     const defaultConfig = selectedModel._defaultConfig;
     let selectedModelConfig: ModelLoadConfig | null = null;
 
