@@ -176,27 +176,44 @@ export class ModelManager {
       finalMaxTokens = finalMaxTokens > 8_192 ? 8_192 : finalMaxTokens;
     }
 
-    const apiKey = this.getUserApiKey(graphConfig, provider);
+    let modelOptions: InitChatModelArgs;
 
-    const modelOptions: InitChatModelArgs = {
-      modelProvider: provider,
-      max_retries: MAX_RETRIES,
-      ...(apiKey ? { apiKey } : {}),
-      ...(thinkingModel && provider === "anthropic"
-        ? {
-            thinking: { budget_tokens: thinkingBudgetTokens, type: "enabled" },
-            maxTokens: thinkingMaxTokens,
-          }
-        : modelName.includes("gpt-5")
+    if (provider === "openai" && modelName === "local-model") {
+      modelOptions = {
+        modelProvider: "openai",
+        max_retries: MAX_RETRIES,
+        temperature: temperature,
+        maxTokens: maxTokens,
+        configuration: {
+          baseURL: "http://127.0.0.1:8080/v1",
+          apiKey: "not-needed",
+        },
+      };
+    } else {
+      const apiKey = this.getUserApiKey(graphConfig, provider);
+      modelOptions = {
+        modelProvider: provider,
+        max_retries: MAX_RETRIES,
+        ...(apiKey ? { apiKey } : {}),
+        ...(thinkingModel && provider === "anthropic"
           ? {
-              max_completion_tokens: finalMaxTokens,
-              temperature: 1,
+              thinking: {
+                budget_tokens: thinkingBudgetTokens,
+                type: "enabled",
+              },
+              maxTokens: thinkingMaxTokens,
             }
-          : {
-              maxTokens: finalMaxTokens,
-              temperature: thinkingModel ? undefined : temperature,
-            }),
-    };
+          : modelName.includes("gpt-5")
+            ? {
+                max_completion_tokens: finalMaxTokens,
+                temperature: 1,
+              }
+            : {
+                maxTokens: finalMaxTokens,
+                temperature: thinkingModel ? undefined : temperature,
+              }),
+      };
+    }
 
     logger.debug("Initializing model", {
       provider,
@@ -303,6 +320,25 @@ export class ModelManager {
     config: GraphConfig,
     task: LLMTask,
   ): ModelLoadConfig {
+    if (config.configurable?.model) {
+      const model = config.configurable.model as string;
+      if (model === "local") {
+        return {
+          provider: "openai",
+          modelName: "local-model",
+          temperature: 0,
+          maxTokens: 10000,
+        };
+      } else if (model === "gemini") {
+        return {
+          provider: "google-genai",
+          modelName: "gemini-2.5-pro",
+          temperature: 0,
+          maxTokens: 10000,
+        };
+      }
+    }
+
     const taskMap = {
       [LLMTask.PLANNER]: {
         modelName:

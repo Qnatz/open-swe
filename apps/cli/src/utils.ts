@@ -9,8 +9,7 @@ import {
   LOCAL_MODE_HEADER,
 } from "@open-swe/shared/constants";
 import { formatDisplayLog } from "./logger.js";
-
-const LANGGRAPH_URL = process.env.LANGGRAPH_URL || "http://localhost:2024";
+import { models } from "./config.js";
 
 /**
  * Submit feedback to the planner
@@ -21,12 +20,14 @@ export async function submitFeedback({
   setLogs,
   setPlannerFeedback,
   setStreamingPhase,
+  model,
 }: {
   plannerFeedback: string;
   plannerThreadId: string;
   setLogs: (updater: (prev: string[]) => string[]) => void; // eslint-disable-line no-unused-vars
   setPlannerFeedback: () => void;
   setStreamingPhase: (phase: "streaming" | "awaitingFeedback" | "done") => void; // eslint-disable-line no-unused-vars
+  model: keyof typeof models;
 }) {
   try {
     // Set streaming phase back to streaming when feedback submission starts
@@ -34,7 +35,7 @@ export async function submitFeedback({
 
     // Create client for local mode
     const client = new Client({
-      apiUrl: LANGGRAPH_URL,
+      apiUrl: process.env.LANGGRAPH_URL || "http://localhost:2024",
       defaultHeaders: {
         [LOCAL_MODE_HEADER]: "true",
       },

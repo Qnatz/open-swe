@@ -8,20 +8,24 @@ import {
 import { formatDisplayLog } from "./logger.js";
 import { isAgentInboxInterruptSchema } from "@open-swe/shared/agent-inbox-interrupt";
 
-const LANGGRAPH_URL = process.env.LANGGRAPH_URL || "http://localhost:2024";
+import { models } from "./config.js";
 
+const LANGGRAPH_URL = process.env.LANGGRAPH_URL || "http://localhost:2024";
 interface StreamingCallbacks {
   setLogs: (updater: (prev: string[]) => string[]) => void; // eslint-disable-line no-unused-vars
   setPlannerThreadId: (id: string) => void; // eslint-disable-line no-unused-vars
   setStreamingPhase: (phase: "streaming" | "awaitingFeedback" | "done") => void; // eslint-disable-line no-unused-vars
   setLoadingLogs: (loading: boolean) => void; // eslint-disable-line no-unused-vars
+  model: keyof typeof models;
 }
 
 export class StreamingService {
   private callbacks: StreamingCallbacks;
+  private model: keyof typeof models;
 
   constructor(callbacks: StreamingCallbacks) {
     this.callbacks = callbacks;
+    this.model = callbacks.model;
   }
 
   private async handleProgrammerStream(
@@ -169,6 +173,7 @@ export class StreamingService {
           branch: "main",
         },
         autoAcceptPlan: false,
+        model: this.model,
       };
 
       const headers = {
@@ -176,7 +181,7 @@ export class StreamingService {
       };
 
       const newClient = new Client({
-        apiUrl: LANGGRAPH_URL,
+        apiUrl: process.env.LANGGRAPH_URL || "http://localhost:2024",
         defaultHeaders: headers,
       });
 

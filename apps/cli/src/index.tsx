@@ -19,6 +19,7 @@ process.on("SIGTERM", () => {
 
 import { submitFeedback } from "./utils.js";
 import { StreamingService } from "./streaming.js";
+import { models } from "./config.js";
 
 // Parse command line arguments with Commander
 const program = new Command();
@@ -27,8 +28,17 @@ program
   .name("open-swe")
   .description("Open SWE CLI - Local Mode")
   .version(OPEN_SWE_CLI_VERSION)
+  .option("--model <model>", "The model to use (e.g., local, gemini)", "local")
   .helpOption("-h, --help", "Display help for command")
   .parse();
+
+const options = program.opts();
+const model = options.model as keyof typeof models;
+
+if (!models[model]) {
+  console.error(`Error: Model "${model}" not found in config.ts`);
+  process.exit(1);
+}
 
 // Always run in local mode
 process.env.OPEN_SWE_LOCAL_MODE = "true";
@@ -98,7 +108,7 @@ const CustomInput: React.FC<{ onSubmit: (value: string) => void }> = ({
   );
 };
 
-const App: React.FC = () => {
+const App: React.FC<{ model: keyof typeof models }> = ({ model }) => {
   const [logs, setLogs] = useState<string[]>([]);
   const [plannerFeedback, setPlannerFeedback] = useState<string | null>(null);
   const [streamingPhase, setStreamingPhase] = useState<
@@ -170,6 +180,7 @@ const App: React.FC = () => {
           setLogs,
           setPlannerFeedback: () => setPlannerFeedback(null),
           setStreamingPhase,
+          model,
         });
       })();
     }
@@ -270,6 +281,7 @@ const App: React.FC = () => {
                   setPlannerThreadId,
                   setStreamingPhase,
                   setLoadingLogs,
+                  model,
                 });
 
                 streamingService.startNewSession(value);
@@ -293,4 +305,4 @@ const App: React.FC = () => {
   );
 };
 
-render(<App />);
+render(<App model={model} />);
