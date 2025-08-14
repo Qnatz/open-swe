@@ -30,12 +30,15 @@ import { StreamMode } from "@langchain/langgraph-sdk";
 
 const logger = createLogger(LogLevel.INFO, "GitHubIssueWebhook");
 
-const GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET!;
+const GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET;
 
-const githubApp = new GitHubApp();
+let githubApp: GitHubApp | undefined;
+if (process.env.GITHUB_APP_ID) {
+  githubApp = new GitHubApp();
+}
 
 const webhooks = new Webhooks({
-  secret: GITHUB_WEBHOOK_SECRET,
+  secret: GITHUB_WEBHOOK_SECRET || "dummy-secret",
 });
 
 const getPayload = (body: string): Record<string, any> | null => {
@@ -81,6 +84,12 @@ const getHeaders = (
 };
 
 webhooks.on("issues.labeled", async ({ payload }) => {
+  if (!githubApp) {
+    logger.warn(
+      "Received 'issues.labeled' webhook but GitHub App is not configured. Skipping.",
+    );
+    return;
+  }
   if (!process.env.SECRETS_ENCRYPTION_KEY) {
     throw new Error("SECRETS_ENCRYPTION_KEY environment variable is required");
   }
