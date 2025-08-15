@@ -124,6 +124,14 @@ async invoke(
         stream: options?.stream,
       };
 
+      // Also check tool_choice on payloadOptions directly
+      if (
+        (payloadOptions as any).tool_choice &&
+        typeof (payloadOptions as any).tool_choice !== "string"
+      ) {
+        (payloadOptions as any).tool_choice = "auto";
+      }
+
       // Extract tools
       const providerSpecificTools = this.providerTools?.[modelConfig.provider];
       let toolsToUse: ExtractedTools | null = null;
