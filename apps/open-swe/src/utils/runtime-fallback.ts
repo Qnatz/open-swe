@@ -142,7 +142,8 @@ export class FallbackRunnable<
         if (
           toolsToUse &&
           "bindTools" in runnableToUse &&
-          runnableToUse.bindTools
+          runnableToUse.bindTools &&
+          modelConfig.provider !== "llamacpp"
         ) {
           const supportsParallelToolCall =
             !MODELS_NO_PARALLEL_TOOL_CALLING.some(
@@ -170,6 +171,11 @@ export class FallbackRunnable<
           stream:
             modelConfig.provider === "llamacpp" ? false : options?.stream,
         };
+
+        if (modelConfig.provider === "llamacpp") {
+          delete (payloadOptions as any).tools;
+          delete (payloadOptions as any).tool_choice;
+        }
 
         const result = await runnableToUse.invoke(
           useProviderMessages(
