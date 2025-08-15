@@ -155,8 +155,8 @@ export class FallbackRunnable<
             );
 
           const kwargs = { ...toolsToUse.kwargs };
-          if (kwargs.tool_choice !== undefined) {
-             kwargs.tool_choice = String(kwargs.tool_choice);
+          if (typeof kwargs.tool_choice !== "string") {
+            kwargs.tool_choice = "auto";
           }
           if (!supportsParallelToolCall && "parallel_tool_calls" in kwargs) {
             delete kwargs.parallel_tool_calls;
@@ -166,8 +166,11 @@ export class FallbackRunnable<
             toolsToUse.tools,
             kwargs,
           );
-        } else if ((payloadOptions as any).tool_choice !== undefined) {
-            (payloadOptions as any).tool_choice = String((payloadOptions as any).tool_choice);
+        } else if (
+          (payloadOptions as any).tool_choice &&
+          typeof (payloadOptions as any).tool_choice !== "string"
+        ) {
+          (payloadOptions as any).tool_choice = "auto";
         }
 
 
