@@ -166,7 +166,9 @@ export class FallbackRunnable<
             toolsToUse.tools,
             kwargs,
           );
-        } else if (
+        }
+
+        if (
           (payloadOptions as any).tool_choice &&
           typeof (payloadOptions as any).tool_choice !== "string"
         ) {
