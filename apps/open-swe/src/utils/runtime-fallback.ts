@@ -89,117 +89,105 @@ export class FallbackRunnable<
     };
   }
 
-  async invoke(
-    input: BaseLanguageModelInput,
-    options?: Record<string, any>,
-  ): Promise<AIMessageChunk> {
-    const modelConfigs = this.modelManager.getModelConfigs(
-      this.config,
-      this.task,
-      this.getPrimaryModel(),
-    );
+async invoke(
+  input: BaseLanguageModelInput,
+  options?: Record<string, any>,
+): Promise<AIMessageChunk> {
+  const modelConfigs = this.modelManager.getModelConfigs(
+    this.config,
+    this.task,
+    this.getPrimaryModel(),
+  );
 
-    logger.debug("Model configs:", modelConfigs);
+  let lastError: Error | undefined;
 
-    let lastError: Error | undefined;
+  for (let i = 0; i < modelConfigs.length; i++) {
+    const modelConfig = modelConfigs[i];
+    const modelKey = `${modelConfig.provider}:${modelConfig.modelName}`;
 
-    for (let i = 0; i < modelConfigs.length; i++) {
-      const modelConfig = modelConfigs[i];
-      const modelKey = `${modelConfig.provider}:${modelConfig.modelName}`;
-
-      if (!this.modelManager.isCircuitClosed(modelKey)) {
-        logger.warn(`Circuit breaker open for ${modelKey}, skipping`);
-        continue;
-      }
-
-      const graphConfig = getConfig() as GraphConfig;
-
-      try {
-        const model = await this.modelManager.initializeModel(
-          modelConfig,
-          graphConfig,
-        );
-        let runnableToUse: Runnable<BaseLanguageModelInput, AIMessageChunk> =
-          model;
-
-        // Check if provider-specific tools exist for this provider
-        const providerSpecificTools =
-          this.providerTools?.[modelConfig.provider];
-        let toolsToUse: ExtractedTools | null = null;
-
-        if (providerSpecificTools) {
-          // Use provider-specific tools if available
-          const extractedTools = this.extractBoundTools();
-          toolsToUse = {
-            tools: providerSpecificTools,
-            kwargs: extractedTools?.kwargs || {},
-          };
-        } else {
-          // Fall back to extracted bound tools from primary model
-          toolsToUse = this.extractBoundTools();
-        }
-
-        if (
-          toolsToUse &&
-          "bindTools" in runnableToUse &&
-          runnableToUse.bindTools &&
-          modelConfig.provider !== "llamacpp"
-        ) {
-          const supportsParallelToolCall =
-            !MODELS_NO_PARALLEL_TOOL_CALLING.some(
-              (modelName) => modelKey === modelName,
-            );
-
-          const kwargs = { ...toolsToUse.kwargs };
-          if (!supportsParallelToolCall && "parallel_tool_calls" in kwargs) {
-            delete kwargs.parallel_tool_calls;
-          }
-
-          runnableToUse = (runnableToUse as ConfigurableModel).bindTools(
-            toolsToUse.tools,
-            kwargs,
-          );
-        }
-
-        const config = this.extractConfig();
-        if (config) {
-          runnableToUse = runnableToUse.withConfig(config);
-        }
-
-        const payloadOptions = {
-          ...options,
-          stream:
-            modelConfig.provider === "llamacpp" ? false : options?.stream,
-        };
-
-        if (modelConfig.provider === "llamacpp") {
-          delete (payloadOptions as any).tools;
-          delete (payloadOptions as any).tool_choice;
-        }
-
-        const result = await runnableToUse.invoke(
-          useProviderMessages(
-            input,
-            this.providerMessages,
-            modelConfig.provider,
-          ),
-          payloadOptions,
-        );
-        this.modelManager.recordSuccess(modelKey);
-        return result;
-      } catch (error) {
-        logger.warn(
-          `${modelKey} failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        lastError = error instanceof Error ? error : new Error(String(error));
-        this.modelManager.recordFailure(modelKey);
-      }
+    if (!this.modelManager.isCircuitClosed(modelKey)) {
+      logger.warn(`Circuit breaker open for ${modelKey}, skipping`);
+      continue;
     }
 
-    throw new Error(
-      `All fallback models exhausted for task ${this.task}. Last error: ${lastError?.message}`,
-    );
+    const graphConfig = getConfig() as GraphConfig;
+
+    try {
+      const model = await this.modelManager.initializeModel(
+        modelConfig,
+        graphConfig,
+      );
+      let runnableToUse: Runnable<BaseLanguageModelInput, AIMessageChunk> = model;
+
+      // Extract tools
+      const providerSpecificTools = this.providerTools?.[modelConfig.provider];
+      let toolsToUse: ExtractedTools | null = null;
+
+      if (providerSpecificTools) {
+        const extractedTools = this.extractBoundTools();
+        toolsToUse = {
+          tools: providerSpecificTools,
+          kwargs: extractedTools?.kwargs || {},
+        };
+      } else {
+        toolsToUse = this.extractBoundTools();
+      }
+
+      // Bind tools, but skip llamacpp
+      if (
+        toolsToUse &&
+        "bindTools" in runnableToUse &&
+        runnableToUse.bindTools &&
+        modelConfig.provider !== "llamacpp"
+      ) {
+        runnableToUse = (runnableToUse as ConfigurableModel).bindTools(
+          toolsToUse.tools,
+          toolsToUse.kwargs,
+        );
+      }
+
+      // Apply config if any
+      const config = this.extractConfig();
+      if (config) {
+        runnableToUse = runnableToUse.withConfig(config);
+      }
+
+      // Prepare payload options
+      const payloadOptions = {
+        ...options,
+        stream: modelConfig.provider === "llamacpp" ? false : options?.stream,
+      };
+
+      // Remove tools for llamacpp to avoid errors
+      if (modelConfig.provider === "llamacpp") {
+        delete payloadOptions.tools;
+        delete payloadOptions.tool_choice;
+        delete payloadOptions.parallel_tool_calls;
+      }
+
+      const result = await runnableToUse.invoke(
+        useProviderMessages(input, this.providerMessages, modelConfig.provider),
+        payloadOptions,
+      );
+
+      this.modelManager.recordSuccess(modelKey);
+      return result;
+
+    } catch (error) {
+      logger.warn(
+        `${modelKey} failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      lastError = error instanceof Error ? error : new Error(String(error));
+      this.modelManager.recordFailure(modelKey);
+    }
   }
+
+  throw new Error(
+    `All fallback models exhausted for task ${this.task}. Last error: ${lastError?.message}`,
+  );
+}
 
   bindTools(
     tools: BindToolsInput[],
