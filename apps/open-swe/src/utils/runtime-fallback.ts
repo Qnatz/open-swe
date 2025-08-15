@@ -120,14 +120,6 @@ export class FallbackRunnable<
         let runnableToUse: Runnable<BaseLanguageModelInput, AIMessageChunk> =
           model;
 
-          // Clone options to avoid mutating the original object
-          const newOptions = { ...options };
-
-          // When using a local model, we need to disable streaming.
-          if (modelConfig.modelName === "local-model") {
-            newOptions.stream = false;
-          }
-
         // Check if provider-specific tools exist for this provider
         const providerSpecificTools =
           this.providerTools?.[modelConfig.provider];
@@ -171,13 +163,19 @@ export class FallbackRunnable<
           runnableToUse = runnableToUse.withConfig(config);
         }
 
+        const payloadOptions = {
+          ...options,
+          stream:
+            modelConfig.modelName === "local-model" ? false : options?.stream,
+        };
+
         const result = await runnableToUse.invoke(
           useProviderMessages(
             input,
             this.providerMessages,
             modelConfig.provider,
           ),
-          newOptions,
+          payloadOptions,
         );
         this.modelManager.recordSuccess(modelKey);
         return result;
