@@ -120,6 +120,14 @@ export class FallbackRunnable<
         let runnableToUse: Runnable<BaseLanguageModelInput, AIMessageChunk> =
           model;
 
+          // Clone options to avoid mutating the original object
+          const newOptions = { ...options };
+
+          // When using a local model, we need to disable streaming.
+          if (modelConfig.modelName === "local-model") {
+            newOptions.stream = false;
+          }
+
         // Check if provider-specific tools exist for this provider
         const providerSpecificTools =
           this.providerTools?.[modelConfig.provider];
@@ -161,18 +169,6 @@ export class FallbackRunnable<
         const config = this.extractConfig();
         if (config) {
           runnableToUse = runnableToUse.withConfig(config);
-        }
-
-        // Clone options to avoid mutating the original object
-        const newOptions = { ...options };
-
-        // llama.cpp server doesn't support streaming with tools
-        if (
-          toolsToUse &&
-          modelConfig.provider === "openai" &&
-          modelConfig.modelName === "local-model"
-        ) {
-          newOptions.stream = false;
         }
 
         const result = await runnableToUse.invoke(

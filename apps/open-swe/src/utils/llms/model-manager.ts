@@ -45,9 +45,9 @@ export enum CircuitState {
 }
 
 export const PROVIDER_FALLBACK_ORDER = [
-  "google-genai",
+  // "google-genai",
   "openai",
-  "anthropic",
+  // "anthropic",
 ] as const;
 export type Provider = (typeof PROVIDER_FALLBACK_ORDER)[number];
 
@@ -444,7 +444,7 @@ export class ModelManager {
     const defaultModels: Record<Provider, Record<LLMTask, string>> = {
       "google-genai": {
         [LLMTask.PLANNER]: "gemini-1.5-flash-latest",
-        [LLMTask.PROGRAMMER]: "gemini-1.f5-flash-latest",
+        [LLMTask.PROGRAMMER]: "gemini-1.5-flash-latest",
         [LLMTask.REVIEWER]: "gemini-1.5-flash-latest",
         [LLMTask.ROUTER]: "gemini-1.5-flash-latest",
         [LLMTask.SUMMARIZER]: "gemini-1.5-flash-latest",
