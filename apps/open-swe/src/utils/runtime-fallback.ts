@@ -89,122 +89,116 @@ export class FallbackRunnable<
     };
   }
 
-async invoke(
-  input: BaseLanguageModelInput,
-  options?: Record<string, any>,
-): Promise<AIMessageChunk> {
-  const modelConfigs = this.modelManager.getModelConfigs(
-    this.config,
-    this.task,
-    this.getPrimaryModel(),
-  );
+  async invoke(
+    input: BaseLanguageModelInput,
+    options?: Record<string, any>,
+  ): Promise<AIMessageChunk> {
+    const modelConfigs = this.modelManager.getModelConfigs(
+      this.config,
+      this.task,
+      this.getPrimaryModel(),
+    );
 
-  let lastError: Error | undefined;
+    logger.debug("Model configs:", modelConfigs);
 
-  for (let i = 0; i < modelConfigs.length; i++) {
-    const modelConfig = modelConfigs[i];
-    const modelKey = `${modelConfig.provider}:${modelConfig.modelName}`;
+    let lastError: Error | undefined;
 
-    if (!this.modelManager.isCircuitClosed(modelKey)) {
-      logger.warn(`Circuit breaker open for ${modelKey}, skipping`);
-      continue;
-    }
+    for (let i = 0; i < modelConfigs.length; i++) {
+      const modelConfig = modelConfigs[i];
+      const modelKey = `${modelConfig.provider}:${modelConfig.modelName}`;
 
-    const graphConfig = getConfig() as GraphConfig;
-
-    try {
-      const model = await this.modelManager.initializeModel(
-        modelConfig,
-        graphConfig,
-      );
-      let runnableToUse: Runnable<BaseLanguageModelInput, AIMessageChunk> = model;
-
-      const payloadOptions = {
-        ...options,
-        stream: options?.stream,
-      };
-
-      // Also check tool_choice on payloadOptions directly
-      if (
-        (payloadOptions as any).tool_choice &&
-        typeof (payloadOptions as any).tool_choice !== "string"
-      ) {
-        (payloadOptions as any).tool_choice = "auto";
+      if (!this.modelManager.isCircuitClosed(modelKey)) {
+        logger.warn(`Circuit breaker open for ${modelKey}, skipping`);
+        continue;
       }
 
-      // Extract tools
-      const providerSpecificTools = this.providerTools?.[modelConfig.provider];
-      let toolsToUse: ExtractedTools | null = null;
+      const graphConfig = getConfig() as GraphConfig;
 
-      if (providerSpecificTools) {
-        const extractedTools = this.extractBoundTools();
-        toolsToUse = {
-          tools: providerSpecificTools,
-          kwargs: extractedTools?.kwargs || {},
-        };
-      } else {
-        toolsToUse = this.extractBoundTools();
-      }
-
-      // Coerce tool_choice to a string if tools are being used
-      if (toolsToUse && toolsToUse.kwargs) {
-        let toolChoice = toolsToUse.kwargs.tool_choice;
-        if (typeof toolChoice !== "string") {
-          toolChoice = "auto";
-        }
-        toolsToUse.kwargs.tool_choice = toolChoice;
-      }
-
-      // Bind tools if supported
-      if (toolsToUse && "bindTools" in runnableToUse && runnableToUse.bindTools) {
-        const supportsParallelToolCall =
-          !MODELS_NO_PARALLEL_TOOL_CALLING.some(
-            (modelName) => modelKey === modelName,
-          );
-
-        const kwargs = { ...toolsToUse.kwargs };
-        if (!supportsParallelToolCall && "parallel_tool_calls" in kwargs) {
-          delete kwargs.parallel_tool_calls;
-        }
-
-        runnableToUse = (runnableToUse as ConfigurableModel).bindTools(
-          toolsToUse.tools,
-          kwargs,
+      try {
+        const model = await this.modelManager.initializeModel(
+          modelConfig,
+          graphConfig,
         );
+        let runnableToUse: Runnable<BaseLanguageModelInput, AIMessageChunk> =
+          model;
 
-        // **Important:** disable streaming if tools are used
-        payloadOptions.stream = false;
+        // Check if provider-specific tools exist for this provider
+        const providerSpecificTools =
+          this.providerTools?.[modelConfig.provider];
+        let toolsToUse: ExtractedTools | null = null;
+
+        if (providerSpecificTools) {
+          // Use provider-specific tools if available
+          const extractedTools = this.extractBoundTools();
+          toolsToUse = {
+            tools: providerSpecificTools,
+            kwargs: extractedTools?.kwargs || {},
+          };
+        } else {
+          // Fall back to extracted bound tools from primary model
+          toolsToUse = this.extractBoundTools();
+        }
+
+        const payloadOptions = {
+          ...options,
+          stream: (toolsToUse?.tools?.length > 0) ? false : options?.stream,
+        };
+
+        if (
+          toolsToUse &&
+          "bindTools" in runnableToUse &&
+          runnableToUse.bindTools
+        ) {
+          const supportsParallelToolCall =
+            !MODELS_NO_PARALLEL_TOOL_CALLING.some(
+              (modelName) => modelKey === modelName,
+            );
+
+          const kwargs = { ...toolsToUse.kwargs };
+          if (kwargs.tool_choice !== undefined) {
+             kwargs.tool_choice = String(kwargs.tool_choice);
+          }
+          if (!supportsParallelToolCall && "parallel_tool_calls" in kwargs) {
+            delete kwargs.parallel_tool_calls;
+          }
+
+          runnableToUse = (runnableToUse as ConfigurableModel).bindTools(
+            toolsToUse.tools,
+            kwargs,
+          );
+        } else if ((payloadOptions as any).tool_choice !== undefined) {
+            (payloadOptions as any).tool_choice = String((payloadOptions as any).tool_choice);
+        }
+
+
+        const config = this.extractConfig();
+        if (config) {
+          runnableToUse = runnableToUse.withConfig(config);
+        }
+
+        const result = await runnableToUse.invoke(
+          useProviderMessages(
+            input,
+            this.providerMessages,
+            modelConfig.provider,
+          ),
+          payloadOptions,
+        );
+        this.modelManager.recordSuccess(modelKey);
+        return result;
+      } catch (error) {
+        logger.warn(
+          `${modelKey} failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        lastError = error instanceof Error ? error : new Error(String(error));
+        this.modelManager.recordFailure(modelKey);
       }
-
-      // Apply config if any
-      const config = this.extractConfig();
-      if (config) {
-        runnableToUse = runnableToUse.withConfig(config);
-      }
-
-      const result = await runnableToUse.invoke(
-        useProviderMessages(input, this.providerMessages, modelConfig.provider),
-        payloadOptions,
-      );
-
-      this.modelManager.recordSuccess(modelKey);
-      return result;
-
-    } catch (error) {
-      logger.warn(
-        `${modelKey} failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-      lastError = error instanceof Error ? error : new Error(String(error));
-      this.modelManager.recordFailure(modelKey);
     }
-  }
 
-  throw new Error(
-    `All fallback models exhausted for task ${this.task}. Last error: ${lastError?.message}`,
-  );
-}
+    throw new Error(
+      `All fallback models exhausted for task ${this.task}. Last error: ${lastError?.message}`,
+    );
+  }
 
   bindTools(
     tools: BindToolsInput[],

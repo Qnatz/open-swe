@@ -48,7 +48,7 @@ export const PROVIDER_FALLBACK_ORDER = [
   "google-genai",
   "openai",
 ] as const;
-export type Provider = (typeof PROVIDER_FALLBACK_ORDER)[number] | "llamacpp";
+export type Provider = (typeof PROVIDER_FALLBACK_ORDER)[number];
 
 export interface ModelManagerConfig {
   /*
@@ -186,17 +186,6 @@ export class ModelManager {
         maxTokens: maxTokens,
         configuration: {
           baseURL: "http://127.0.0.1:8080/v1",
-          apiKey: "not-needed",
-        },
-      };
-    } else if (provider === "llamacpp") {
-      modelOptions = {
-        modelProvider: "openai", // Use OpenAI compatibility layer
-        max_retries: MAX_RETRIES,
-        temperature: temperature,
-        maxTokens: maxTokens,
-        configuration: {
-          baseURL: process.env.LLAMACPP_BASE_URL || "http://127.0.0.1:8080/v1",
           apiKey: "not-needed",
         },
       };
@@ -341,7 +330,7 @@ export class ModelManager {
       const modelChoice = fs.readFileSync("/tmp/open_swe_model_choice.txt", "utf8").trim();
       if (modelChoice === "local") {
         return {
-          provider: "llamacpp",
+          provider: "openai",
           modelName: "local-model",
           temperature: 0,
           maxTokens: 10000,
@@ -362,7 +351,7 @@ export class ModelManager {
       const model = config.configurable.model as string;
       if (model === "local") {
         return {
-          provider: "llamacpp",
+          provider: "openai",
           modelName: "local-model",
           temperature: 0,
           maxTokens: 10000,
