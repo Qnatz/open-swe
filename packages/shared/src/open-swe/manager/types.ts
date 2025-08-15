@@ -44,6 +44,10 @@ export const ManagerGraphStateObj = MessagesZodState.extend({
       fn: (_state, update) => update,
     },
   }),
+  /**
+   * The model to use for the agent, selected from the CLI.
+   */
+  model: z.string().optional(),
 });
 
 export type ManagerGraphState = z.infer<typeof ManagerGraphStateObj>;
