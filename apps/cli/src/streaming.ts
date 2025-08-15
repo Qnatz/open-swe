@@ -188,15 +188,24 @@ export class StreamingService {
       const thread = await newClient.threads.create();
       const threadId = thread.thread_id;
 
-      const run = await newClient.runs.create(threadId, MANAGER_GRAPH_ID, {
-        input: runInput,
-        config: {
-          recursion_limit: 400,
-        },
-        ifNotExists: "create",
-        streamResumable: true,
-        streamMode: OPEN_SWE_STREAM_MODE as StreamMode[],
-      });
+      const run =
+        this.model === "local"
+          ? await newClient.runs.create(threadId, MANAGER_GRAPH_ID, {
+              input: runInput,
+              config: {
+                recursion_limit: 400,
+              },
+              ifNotExists: "create",
+            })
+          : await newClient.runs.create(threadId, MANAGER_GRAPH_ID, {
+              input: runInput,
+              config: {
+                recursion_limit: 400,
+              },
+              ifNotExists: "create",
+              streamResumable: true,
+              streamMode: OPEN_SWE_STREAM_MODE as StreamMode[],
+            });
 
       await this.startManagerStream(newClient, threadId, run.run_id);
     } catch (err: any) {

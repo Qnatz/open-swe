@@ -47,6 +47,7 @@ export enum CircuitState {
 export const PROVIDER_FALLBACK_ORDER = [
   "google-genai",
   "openai",
+  "anthropic",
 ] as const;
 export type Provider = (typeof PROVIDER_FALLBACK_ORDER)[number];
 
@@ -454,6 +455,13 @@ export class ModelManager {
         [LLMTask.REVIEWER]: "local-model",
         [LLMTask.ROUTER]: "local-model",
         [LLMTask.SUMMARIZER]: "local-model",
+      },
+      anthropic: {
+        [LLMTask.PLANNER]: "claude-3-haiku-20240307",
+        [LLMTask.PROGRAMMER]: "claude-3-haiku-20240307",
+        [LLMTask.REVIEWER]: "claude-3-haiku-20240307",
+        [LLMTask.ROUTER]: "claude-3-haiku-20240307",
+        [LLMTask.SUMMARIZER]: "claude-3-haiku-20240307",
       },
     };
 
