@@ -129,24 +129,22 @@ async invoke(
       let toolsToUse: ExtractedTools | null = null;
 
       if (providerSpecificTools) {
-        // Use provider-specific tools if available
         const extractedTools = this.extractBoundTools();
-
-        // Ensure tool_choice is always a string
-        let toolChoice = extractedTools?.kwargs?.tool_choice;
-        if (typeof toolChoice !== "string") {
-          toolChoice = toolChoice?.toString() ?? "default_tool";
-        }
-
         toolsToUse = {
           tools: providerSpecificTools,
-          kwargs: {
-            ...extractedTools?.kwargs,
-            tool_choice: toolChoice,
-          },
+          kwargs: extractedTools?.kwargs || {},
         };
       } else {
         toolsToUse = this.extractBoundTools();
+      }
+
+      // Coerce tool_choice to a string if tools are being used
+      if (toolsToUse && toolsToUse.kwargs) {
+        let toolChoice = toolsToUse.kwargs.tool_choice;
+        if (typeof toolChoice !== "string") {
+          toolChoice = toolChoice?.toString() ?? "default_tool";
+        }
+        toolsToUse.kwargs.tool_choice = toolChoice;
       }
 
       // Bind tools if supported
