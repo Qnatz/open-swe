@@ -44,9 +44,8 @@ export enum CircuitState {
 }
 
 export const PROVIDER_FALLBACK_ORDER = [
-  "openai",
-  "anthropic",
   "google-genai",
+  "openai",
 ] as const;
 export type Provider = (typeof PROVIDER_FALLBACK_ORDER)[number];
 
@@ -419,30 +418,23 @@ export class ModelManager {
     task: LLMTask,
   ): ModelLoadConfig | null {
     const defaultModels: Record<Provider, Record<LLMTask, string>> = {
-      anthropic: {
-        [LLMTask.PLANNER]: "claude-sonnet-4-0",
-        [LLMTask.PROGRAMMER]: "claude-sonnet-4-0",
-        [LLMTask.REVIEWER]: "claude-sonnet-4-0",
-        [LLMTask.ROUTER]: "claude-3-5-haiku-latest",
-        [LLMTask.SUMMARIZER]: "claude-sonnet-4-0",
-      },
       "google-genai": {
-        [LLMTask.PLANNER]: "gemini-2.5-flash",
-        [LLMTask.PROGRAMMER]: "gemini-2.5-pro",
-        [LLMTask.REVIEWER]: "gemini-2.5-flash",
-        [LLMTask.ROUTER]: "gemini-2.5-flash",
-        [LLMTask.SUMMARIZER]: "gemini-2.5-pro",
+        [LLMTask.PLANNER]: "gemini-1.5-flash-latest",
+        [LLMTask.PROGRAMMER]: "gemini-1.5-flash-latest",
+        [LLMTask.REVIEWER]: "gemini-1.5-flash-latest",
+        [LLMTask.ROUTER]: "gemini-1.5-flash-latest",
+        [LLMTask.SUMMARIZER]: "gemini-1.5-flash-latest",
       },
       openai: {
-        [LLMTask.PLANNER]: "gpt-5",
-        [LLMTask.PROGRAMMER]: "gpt-5",
-        [LLMTask.REVIEWER]: "gpt-5",
-        [LLMTask.ROUTER]: "gpt-5-nano",
-        [LLMTask.SUMMARIZER]: "gpt-5-mini",
+        [LLMTask.PLANNER]: "local-model",
+        [LLMTask.PROGRAMMER]: "local-model",
+        [LLMTask.REVIEWER]: "local-model",
+        [LLMTask.ROUTER]: "local-model",
+        [LLMTask.SUMMARIZER]: "local-model",
       },
     };
 
-    const modelName = defaultModels[provider][task];
+    const modelName = defaultModels[provider]?.[task];
     if (!modelName) {
       return null;
     }
