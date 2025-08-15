@@ -11,6 +11,7 @@ import {
 import { isAllowedUser } from "@open-swe/shared/github/allowed-users";
 import { decryptSecret } from "@open-swe/shared/crypto";
 import { API_KEY_REQUIRED_MESSAGE } from "@open-swe/shared/constants";
+import fs from "fs";
 
 const logger = createLogger(LogLevel.INFO, "ModelManager");
 
@@ -324,6 +325,28 @@ export class ModelManager {
     config: GraphConfig,
     task: LLMTask,
   ): ModelLoadConfig {
+    // HACK: Read model choice from a temporary file as a workaround for state passing bug
+    try {
+      const modelChoice = fs.readFileSync("/tmp/open_swe_model_choice.txt", "utf8").trim();
+      if (modelChoice === "local") {
+        return {
+          provider: "openai",
+          modelName: "local-model",
+          temperature: 0,
+          maxTokens: 10000,
+        };
+      } else if (modelChoice === "gemini") {
+        return {
+          provider: "google-genai",
+          modelName: "gemini-1.5-flash-latest",
+          temperature: 0,
+          maxTokens: 10000,
+        };
+      }
+    } catch (err) {
+      // File not found or other error, proceed with default logic
+    }
+
     if (config.configurable?.model) {
       const model = config.configurable.model as string;
       if (model === "local") {
@@ -336,7 +359,7 @@ export class ModelManager {
       } else if (model === "gemini") {
         return {
           provider: "google-genai",
-          modelName: "gemini-2.5-pro",
+          modelName: "gemini-1.5-flash-latest",
           temperature: 0,
           maxTokens: 10000,
         };

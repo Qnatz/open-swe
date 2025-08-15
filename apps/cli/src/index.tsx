@@ -20,6 +20,7 @@ process.on("SIGTERM", () => {
 import { submitFeedback } from "./utils.js";
 import { StreamingService } from "./streaming.js";
 import { models } from "./config.js";
+import fs from "fs";
 
 // Parse command line arguments with Commander
 const program = new Command();
@@ -38,6 +39,14 @@ const model = options.model as keyof typeof models;
 if (!models[model]) {
   console.error(`Error: Model "${model}" not found in config.ts`);
   process.exit(1);
+}
+
+// Write the model choice to a temporary file for the server to read
+try {
+  fs.writeFileSync("/tmp/open_swe_model_choice.txt", model, "utf8");
+} catch (err) {
+  console.error("Failed to write model choice to temp file:", err);
+  // We can still continue, the server will just use its default
 }
 
 // Always run in local mode
