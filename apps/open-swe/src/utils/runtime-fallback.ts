@@ -163,13 +163,25 @@ export class FallbackRunnable<
           runnableToUse = runnableToUse.withConfig(config);
         }
 
+        // Clone options to avoid mutating the original object
+        const newOptions = { ...options };
+
+        // llama.cpp server doesn't support streaming with tools
+        if (
+          toolsToUse &&
+          modelConfig.provider === "openai" &&
+          modelConfig.modelName === "local-model"
+        ) {
+          newOptions.stream = false;
+        }
+
         const result = await runnableToUse.invoke(
           useProviderMessages(
             input,
             this.providerMessages,
             modelConfig.provider,
           ),
-          options,
+          newOptions,
         );
         this.modelManager.recordSuccess(modelKey);
         return result;
