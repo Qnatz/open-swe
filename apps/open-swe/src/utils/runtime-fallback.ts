@@ -142,7 +142,7 @@ async invoke(
       if (toolsToUse && toolsToUse.kwargs) {
         let toolChoice = toolsToUse.kwargs.tool_choice;
         if (typeof toolChoice !== "string") {
-          toolChoice = toolChoice?.toString() ?? "default_tool";
+          toolChoice = "auto";
         }
         toolsToUse.kwargs.tool_choice = toolChoice;
       }
