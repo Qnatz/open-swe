@@ -67,6 +67,7 @@ export async function startPlanner(
       taskPlan: state.taskPlan,
       branchName: state.branchName ?? getBranchName(config),
       autoAcceptPlan: state.autoAcceptPlan,
+      model: state.model,
       ...(followupMessage || localMode ? { messages: [followupMessage] } : {}),
     };
 
