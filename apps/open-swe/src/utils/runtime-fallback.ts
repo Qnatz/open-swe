@@ -119,50 +119,61 @@ async invoke(
       );
       let runnableToUse: Runnable<BaseLanguageModelInput, AIMessageChunk> = model;
 
+      const payloadOptions = {
+        ...options,
+        stream: options?.stream,
+      };
+
       // Extract tools
       const providerSpecificTools = this.providerTools?.[modelConfig.provider];
       let toolsToUse: ExtractedTools | null = null;
 
       if (providerSpecificTools) {
+        // Use provider-specific tools if available
         const extractedTools = this.extractBoundTools();
+
+        // Ensure tool_choice is always a string
+        let toolChoice = extractedTools?.kwargs?.tool_choice;
+        if (typeof toolChoice !== "string") {
+          toolChoice = toolChoice?.toString() ?? "default_tool";
+        }
+
         toolsToUse = {
           tools: providerSpecificTools,
-          kwargs: extractedTools?.kwargs || {},
+          kwargs: {
+            ...extractedTools?.kwargs,
+            tool_choice: toolChoice,
+          },
         };
       } else {
         toolsToUse = this.extractBoundTools();
       }
 
-      // Bind tools, but skip llamacpp
-      if (
-        toolsToUse &&
-        "bindTools" in runnableToUse &&
-        runnableToUse.bindTools &&
-        modelConfig.provider !== "llamacpp"
-      ) {
+      // Bind tools if supported
+      if (toolsToUse && "bindTools" in runnableToUse && runnableToUse.bindTools) {
+        const supportsParallelToolCall =
+          !MODELS_NO_PARALLEL_TOOL_CALLING.some(
+            (modelName) => modelKey === modelName,
+          );
+
+        const kwargs = { ...toolsToUse.kwargs };
+        if (!supportsParallelToolCall && "parallel_tool_calls" in kwargs) {
+          delete kwargs.parallel_tool_calls;
+        }
+
         runnableToUse = (runnableToUse as ConfigurableModel).bindTools(
           toolsToUse.tools,
-          toolsToUse.kwargs,
+          kwargs,
         );
+
+        // **Important:** disable streaming if tools are used
+        payloadOptions.stream = false;
       }
 
       // Apply config if any
       const config = this.extractConfig();
       if (config) {
         runnableToUse = runnableToUse.withConfig(config);
-      }
-
-      // Prepare payload options
-      const payloadOptions = {
-        ...options,
-        stream: modelConfig.provider === "llamacpp" ? false : options?.stream,
-      };
-
-      // Remove tools for llamacpp to avoid errors
-      if (modelConfig.provider === "llamacpp") {
-        delete payloadOptions.tools;
-        delete payloadOptions.tool_choice;
-        delete payloadOptions.parallel_tool_calls;
       }
 
       const result = await runnableToUse.invoke(
