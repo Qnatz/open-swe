@@ -194,6 +194,7 @@ export class StreamingService {
               input: runInput,
               config: {
                 recursion_limit: 400,
+                stream: false,
               },
               ifNotExists: "create",
             })

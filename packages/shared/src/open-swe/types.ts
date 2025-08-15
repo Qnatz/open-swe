@@ -504,6 +504,11 @@ export const GraphConfigurationMetadata: {
       type: "hidden",
     },
   },
+  model: {
+    x_open_swe_ui_config: {
+      type: "hidden",
+    },
+  },
 };
 
 export const GraphConfiguration = z.object({
