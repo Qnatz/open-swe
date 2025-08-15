@@ -47,8 +47,6 @@ export enum CircuitState {
 export const PROVIDER_FALLBACK_ORDER = [
   "google-genai",
   "openai",
-  "anthropic",
-  "llamacpp",
 ] as const;
 export type Provider = (typeof PROVIDER_FALLBACK_ORDER)[number];
 
@@ -84,8 +82,6 @@ const providerToApiKey = (
       return apiKeys.anthropicApiKey;
     case "google-genai":
       return apiKeys.googleApiKey;
-    case "llamacpp":
-      return "";
     default:
       throw new Error(`Unknown provider: ${providerName}`);
   }
@@ -182,7 +178,7 @@ export class ModelManager {
 
     let modelOptions: InitChatModelArgs;
 
-    if (provider === "llamacpp") {
+    if (provider === "openai" && modelName === "local-model") {
       modelOptions = {
         modelProvider: "openai",
         max_retries: MAX_RETRIES,
@@ -334,7 +330,7 @@ export class ModelManager {
       const modelChoice = fs.readFileSync("/tmp/open_swe_model_choice.txt", "utf8").trim();
       if (modelChoice === "local") {
         return {
-          provider: "llamacpp",
+          provider: "openai",
           modelName: "local-model",
           temperature: 0,
           maxTokens: 10000,
@@ -355,7 +351,7 @@ export class ModelManager {
       const model = config.configurable.model as string;
       if (model === "local") {
         return {
-          provider: "llamacpp",
+          provider: "openai",
           modelName: "local-model",
           temperature: 0,
           maxTokens: 10000,
@@ -458,13 +454,6 @@ export class ModelManager {
         [LLMTask.REVIEWER]: "local-model",
         [LLMTask.ROUTER]: "local-model",
         [LLMTask.SUMMARIZER]: "local-model",
-      },
-      anthropic: {
-        [LLMTask.PLANNER]: "claude-3-haiku-20240307",
-        [LLMTask.PROGRAMMER]: "claude-3-haiku-20240307",
-        [LLMTask.REVIEWER]: "claude-3-haiku-20240307",
-        [LLMTask.ROUTER]: "claude-3-haiku-20240307",
-        [LLMTask.SUMMARIZER]: "claude-3-haiku-20240307",
       },
     };
 

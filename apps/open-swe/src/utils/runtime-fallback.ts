@@ -99,6 +99,8 @@ export class FallbackRunnable<
       this.getPrimaryModel(),
     );
 
+    logger.debug("Model configs:", modelConfigs);
+
     let lastError: Error | undefined;
 
     for (let i = 0; i < modelConfigs.length; i++) {
