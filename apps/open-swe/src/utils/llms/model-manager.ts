@@ -48,6 +48,7 @@ export const PROVIDER_FALLBACK_ORDER = [
   "google-genai",
   "openai",
   "anthropic",
+  "llamacpp",
 ] as const;
 export type Provider = (typeof PROVIDER_FALLBACK_ORDER)[number];
 
@@ -83,6 +84,8 @@ const providerToApiKey = (
       return apiKeys.anthropicApiKey;
     case "google-genai":
       return apiKeys.googleApiKey;
+    case "llamacpp":
+      return "";
     default:
       throw new Error(`Unknown provider: ${providerName}`);
   }
@@ -179,7 +182,7 @@ export class ModelManager {
 
     let modelOptions: InitChatModelArgs;
 
-    if (provider === "openai" && modelName === "local-model") {
+    if (provider === "llamacpp") {
       modelOptions = {
         modelProvider: "openai",
         max_retries: MAX_RETRIES,
@@ -331,7 +334,7 @@ export class ModelManager {
       const modelChoice = fs.readFileSync("/tmp/open_swe_model_choice.txt", "utf8").trim();
       if (modelChoice === "local") {
         return {
-          provider: "openai",
+          provider: "llamacpp",
           modelName: "local-model",
           temperature: 0,
           maxTokens: 10000,
@@ -352,7 +355,7 @@ export class ModelManager {
       const model = config.configurable.model as string;
       if (model === "local") {
         return {
-          provider: "openai",
+          provider: "llamacpp",
           modelName: "local-model",
           temperature: 0,
           maxTokens: 10000,

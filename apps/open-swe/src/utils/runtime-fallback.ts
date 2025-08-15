@@ -166,7 +166,7 @@ export class FallbackRunnable<
         const payloadOptions = {
           ...options,
           stream:
-            modelConfig.modelName === "local-model" ? false : options?.stream,
+            modelConfig.provider === "llamacpp" ? false : options?.stream,
         };
 
         const result = await runnableToUse.invoke(
