@@ -141,7 +141,7 @@ export class FallbackRunnable<
 
         const payloadOptions = {
           ...options,
-          stream: (toolsToUse?.tools?.length > 0) ? false : options?.stream,
+          stream: (toolsToUse && toolsToUse.tools && toolsToUse.tools.length > 0) ? false : options?.stream,
         };
 
         if (
@@ -187,7 +187,7 @@ export class FallbackRunnable<
             this.providerMessages,
             modelConfig.provider,
           ),
-          payloadOptions,
+          payloadOptions as any,
         );
         this.modelManager.recordSuccess(modelKey);
         return result;

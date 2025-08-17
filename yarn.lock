@@ -3646,6 +3646,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mswjs/interceptors@npm:^0.39.5":
+  version: 0.39.6
+  resolution: "@mswjs/interceptors@npm:0.39.6"
+  dependencies:
+    "@open-draft/deferred-promise": ^2.2.0
+    "@open-draft/logger": ^0.3.0
+    "@open-draft/until": ^2.0.0
+    is-node-process: ^1.2.0
+    outvariant: ^1.4.3
+    strict-event-emitter: ^0.5.1
+  checksum: 4960ad247aeabdb6465754ab4646b6441032bdc26cef8c38696240cd3968e99533363f7e71f5d3f8f170b49456c2f1294920c28031327ea7d721320e3863b546
+  languageName: node
+  linkType: hard
+
 "@napi-rs/wasm-runtime@npm:^0.2.11":
   version: 0.2.12
   resolution: "@napi-rs/wasm-runtime@npm:0.2.12"
@@ -4116,6 +4130,7 @@ __metadata:
     "@types/commander": ^2.12.5
     "@types/jest": ^29.5.0
     "@types/jsonwebtoken": ^9.0.10
+    "@types/nock": ^11.1.0
     "@types/node": ^22.13.5
     bcrypt: ^6.0.0
     commander: ^14.0.0
@@ -4131,6 +4146,7 @@ __metadata:
     jsonwebtoken: ^9.0.2
     langchain: ^0.3.26
     langsmith: ^0.3.29
+    nock: ^13.5.4
     prettier: ^3.5.2
     ts-jest: ^29.1.0
     tsx: ^4.20.3
@@ -6988,6 +7004,15 @@ __metadata:
   dependencies:
     "@types/unist": "*"
   checksum: 8f4172da36e60645bf2392ccd42bd2a950ec677b8e79f49cc2c5d1f2c673ea106ae7004a559eb3084a07dbf6cc1e01d10f536eb990558ff5f52d1af69b9c557c
+  languageName: node
+  linkType: hard
+
+"@types/nock@npm:^11.1.0":
+  version: 11.1.0
+  resolution: "@types/nock@npm:11.1.0"
+  dependencies:
+    nock: "*"
+  checksum: 7da1724ea2cbcd00730cc41e4880d987b0450823d5246cb1b0665be8db43ea9517bdff2161a1ecba8f23382c1e410b9b46da621614a9ae286568e6a8fd8a0a74
   languageName: node
   linkType: hard
 
@@ -13800,6 +13825,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"json-stringify-safe@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "json-stringify-safe@npm:5.0.1"
+  checksum: 48ec0adad5280b8a96bb93f4563aa1667fd7a36334f79149abd42446d0989f2ddc58274b479f4819f1f00617957e6344c886c55d05a4e15ebb4ab931e4a6a8ee
+  languageName: node
+  linkType: hard
+
 "json5@npm:^1.0.2":
   version: 1.0.2
   resolution: "json5@npm:1.0.2"
@@ -15835,6 +15867,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nock@npm:*":
+  version: 14.0.10
+  resolution: "nock@npm:14.0.10"
+  dependencies:
+    "@mswjs/interceptors": ^0.39.5
+    json-stringify-safe: ^5.0.1
+    propagate: ^2.0.0
+  checksum: 3069ef9dc01a1c7f0de22cc93c6c00755501d4acfc2a53640f89868d2f08d241f90380c7744e4458d48d17ec89e628c211ce4702ae5d065719b91fd55d6a4ad6
+  languageName: node
+  linkType: hard
+
+"nock@npm:^13.5.4":
+  version: 13.5.6
+  resolution: "nock@npm:13.5.6"
+  dependencies:
+    debug: ^4.1.0
+    json-stringify-safe: ^5.0.1
+    propagate: ^2.0.0
+  checksum: 82d31ef7a428e8a6bc430b2772745ecb1f9c8835170789bbcc29c9036614adf3b7112daeb6d59edd93f4340a9a96acee401021572d469a7a0e09a669679f2794
+  languageName: node
+  linkType: hard
+
 "node-addon-api@npm:^8.3.0":
   version: 8.5.0
   resolution: "node-addon-api@npm:8.5.0"
@@ -17003,6 +17057,13 @@ __metadata:
     object-assign: ^4.1.1
     react-is: ^16.13.1
   checksum: c056d3f1c057cb7ff8344c645450e14f088a915d078dcda795041765047fa080d38e5d626560ccaac94a4e16e3aa15f3557c1a9a8d1174530955e992c675e459
+  languageName: node
+  linkType: hard
+
+"propagate@npm:^2.0.0":
+  version: 2.0.1
+  resolution: "propagate@npm:2.0.1"
+  checksum: c4febaee2be0979e82fb6b3727878fd122a98d64a7fa3c9d09b0576751b88514a9e9275b1b92e76b364d488f508e223bd7e1dcdc616be4cdda876072fbc2a96c
   languageName: node
   linkType: hard
 

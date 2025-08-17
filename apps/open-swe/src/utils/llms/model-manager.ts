@@ -2,6 +2,7 @@ import {
   ConfigurableModel,
   initChatModel,
 } from "langchain/chat_models/universal";
+import { getKobeStandardModel } from "./custom-chat-ollama.js";
 import { GraphConfig } from "@open-swe/shared/open-swe/types";
 import { createLogger, LogLevel } from "../logger.js";
 import {
@@ -14,8 +15,6 @@ import { API_KEY_REQUIRED_MESSAGE } from "@open-swe/shared/constants";
 import fs from "fs";
 
 const logger = createLogger(LogLevel.INFO, "ModelManager");
-
-type InitChatModelArgs = Parameters<typeof initChatModel>[1];
 
 export interface CircuitBreakerState {
   state: CircuitState;
@@ -47,6 +46,7 @@ export enum CircuitState {
 export const PROVIDER_FALLBACK_ORDER = [
   "google-genai",
   "openai",
+  "anthropic",
 ] as const;
 export type Provider = (typeof PROVIDER_FALLBACK_ORDER)[number];
 
@@ -176,51 +176,44 @@ export class ModelManager {
       finalMaxTokens = finalMaxTokens > 8_192 ? 8_192 : finalMaxTokens;
     }
 
-    let modelOptions: InitChatModelArgs;
-
     if (provider === "openai" && modelName === "local-model") {
-      modelOptions = {
-        modelProvider: "openai",
-        max_retries: MAX_RETRIES,
+      return getKobeStandardModel({
+        model: "local-model",
+        baseUrl: "http://127.0.0.1:8080/v1",
         temperature: temperature,
-        maxTokens: maxTokens,
-        configuration: {
-          baseURL: "http://127.0.0.1:8080/v1",
-          apiKey: "not-needed",
-        },
-      };
-    } else {
-      const apiKey = this.getUserApiKey(graphConfig, provider);
-      modelOptions = {
-        modelProvider: provider,
-        max_retries: MAX_RETRIES,
-        ...(apiKey ? { apiKey } : {}),
-        ...(thinkingModel && provider === "anthropic"
-          ? {
-              thinking: {
-                budget_tokens: thinkingBudgetTokens,
-                type: "enabled",
-              },
-              maxTokens: thinkingMaxTokens,
-            }
-          : modelName.includes("gpt-5")
-            ? {
-                max_completion_tokens: finalMaxTokens,
-                temperature: 1,
-              }
-            : {
-                maxTokens: finalMaxTokens,
-                temperature: thinkingModel ? undefined : temperature,
-              }),
-      };
+      });
     }
+
+    const apiKey = this.getUserApiKey(graphConfig, provider);
+    const modelOptions = {
+      modelProvider: provider,
+      max_retries: MAX_RETRIES,
+      ...(apiKey ? { apiKey } : {}),
+      ...(thinkingModel && provider === "anthropic"
+        ? {
+            thinking: {
+              budget_tokens: thinkingBudgetTokens,
+              type: "enabled",
+            },
+            maxTokens: thinkingMaxTokens,
+          }
+        : modelName.includes("gpt-5")
+          ? {
+              max_completion_tokens: finalMaxTokens,
+              temperature: 1,
+            }
+          : {
+              maxTokens: finalMaxTokens,
+              temperature: thinkingModel ? undefined : temperature,
+            }),
+    };
 
     logger.debug("Initializing model", {
       provider,
       modelName,
     });
 
-    return await initChatModel(modelName, modelOptions);
+    return await initChatModel(modelName, modelOptions as any);
   }
 
   public getModelConfigs(
@@ -230,10 +223,6 @@ export class ModelManager {
   ) {
     const baseConfig = this.getBaseConfigForTask(config, task);
 
-    // If a model was explicitly selected via the CLI, only use that model and disable fallbacks.
-    if (config.configurable?.model) {
-      return [baseConfig];
-    }
 
     const configs: ModelLoadConfig[] = [];
     const defaultConfig = selectedModel._defaultConfig;
@@ -347,25 +336,6 @@ export class ModelManager {
       // File not found or other error, proceed with default logic
     }
 
-    if (config.configurable?.model) {
-      const model = config.configurable.model as string;
-      if (model === "local") {
-        return {
-          provider: "openai",
-          modelName: "local-model",
-          temperature: 0,
-          maxTokens: 10000,
-        };
-      } else if (model === "gemini") {
-        return {
-          provider: "google-genai",
-          modelName: "gemini-1.5-flash-latest",
-          temperature: 0,
-          maxTokens: 10000,
-        };
-      }
-    }
-
     const taskMap = {
       [LLMTask.PLANNER]: {
         modelName:
@@ -455,6 +425,13 @@ export class ModelManager {
         [LLMTask.ROUTER]: "local-model",
         [LLMTask.SUMMARIZER]: "local-model",
       },
+      anthropic: {
+        [LLMTask.PLANNER]: "claude-3-5-sonnet-latest",
+        [LLMTask.PROGRAMMER]: "claude-3-5-sonnet-latest",
+        [LLMTask.REVIEWER]: "claude-3-5-sonnet-latest",
+        [LLMTask.ROUTER]: "claude-3-5-sonnet-latest",
+        [LLMTask.SUMMARIZER]: "claude-3-5-sonnet-latest",
+      }
     };
 
     const modelName = defaultModels[provider]?.[task];
